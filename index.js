@@ -18,17 +18,38 @@ queryStringToMap = () => {
 }
 
 function initMap() {
-    const $map = $('#map');
     const directionsService = new google.maps.DirectionsService();
     const request = {
-        origin: 'M21 8TX',
+        origin: '29 Brookfield Ave, Manchester, England',
         destination: 'Cake Solutions, Houldsworth Street, Stockport',
         travelMode: 'DRIVING'
     };
     directionsService.route(request, function (response, status) {
-        console.dir(arguments);
-        response.routes[0].overview_path.forEach((p, index) => {
-            console.log(`[${index}] lat: ${p.lat()}; lng: ${p.lng()}`);
-        });
+        let positionIndex = 0;
+        const position = response.routes[0].overview_path[positionIndex];
+        console.log(`position: ${position}`);
+        const mapDiv = $('#map')[0];
+        const panorama = new google.maps.StreetViewPanorama(
+            mapDiv, {
+                position,
+                pov: {
+                    heading: 0,
+                    pitch: 0
+                },
+                panControl: false,
+                zoomControl: false,
+                addressControl: false,
+                fullscreenControl: false,
+                motionTrackingControl: false,
+                linksControl: false,
+                enableCloseButton: false
+            });
+        const setPosition = positionIndex => {
+            const position = response.routes[0].overview_path[positionIndex];
+            console.log(`position: ${position}`);
+            panorama.setPosition(position);
+        };
+        const $nextLocationBtn = $('#nextLocationBtn');
+        $nextLocationBtn.click(() => setPosition(++positionIndex));
     });
 };
