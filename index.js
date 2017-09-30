@@ -25,9 +25,10 @@ function initMap() {
         travelMode: 'DRIVING'
     };
     directionsService.route(request, function (response, status) {
+        console.dir(response);
+        const numPositions = response.routes[0].overview_path.length;
         let positionIndex = 0;
         const position = response.routes[0].overview_path[positionIndex];
-        console.log(`position: ${position}`);
         const mapDiv = $('#map')[0];
         const panorama = new google.maps.StreetViewPanorama(
             mapDiv, {
@@ -44,12 +45,18 @@ function initMap() {
                 linksControl: false,
                 enableCloseButton: false
             });
-        const setPosition = positionIndex => {
+        const showPositionIndex = positionIndex => {
             const position = response.routes[0].overview_path[positionIndex];
-            console.log(`position: ${position}`);
             panorama.setPosition(position);
+            const photographerPov = panorama.getPhotographerPov();
+            console.log(`photographerPov: ${JSON.stringify(photographerPov)}`);
+            panorama.setPov(photographerPov);
         };
         const $nextLocationBtn = $('#nextLocationBtn');
-        $nextLocationBtn.click(() => setPosition(++positionIndex));
+        $nextLocationBtn.click(() => {
+            if (++positionIndex < numPositions) {
+                showPositionIndex(positionIndex);
+            }
+        });
     });
 };
