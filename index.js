@@ -7,7 +7,7 @@ $(document).ready(() => {
     $submitBtn.click(e => {
         e.preventDefault();
         const apiKey = $apiKey.val();
-        const src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&callback=initMap`;
+        const src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=geometry&callback=initMap`;
         $('head').append($('<script>', { src }));
     });
 });
@@ -25,16 +25,17 @@ function initMap() {
         travelMode: 'DRIVING'
     };
     directionsService.route(request, function (response, status) {
-        console.dir(response);
         const numPositions = response.routes[0].overview_path.length;
         let positionIndex = 0;
-        const position = response.routes[0].overview_path[positionIndex];
+        const position1 = response.routes[0].overview_path[positionIndex];
+        const position2 = response.routes[0].overview_path[positionIndex + 1];
+        const heading = google.maps.geometry.spherical.computeHeading(position1, position2);
         const mapDiv = $('#map')[0];
         const panorama = new google.maps.StreetViewPanorama(
             mapDiv, {
-                position,
+                position: position1,
                 pov: {
-                    heading: 0,
+                    heading,
                     pitch: 0
                 },
                 panControl: false,
@@ -45,12 +46,20 @@ function initMap() {
                 linksControl: false,
                 enableCloseButton: false
             });
+        const src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=geometry&callback=initMap`;
         const showPositionIndex = positionIndex => {
-            const position = response.routes[0].overview_path[positionIndex];
-            panorama.setPosition(position);
-            const photographerPov = panorama.getPhotographerPov();
-            console.log(`photographerPov: ${JSON.stringify(photographerPov)}`);
-            panorama.setPov(photographerPov);
+            const position1 = response.routes[0].overview_path[positionIndex];
+            if (positionIndex + 1 < numPositions) {
+                const position2 = response.routes[0].overview_path[positionIndex + 1];
+                const heading = google.maps.geometry.spherical.computeHeading(position1, position2);
+                panorama.setPosition(position1);
+                const pov = panorama.pov;
+                pov.heading = heading;
+                panorama.setPov(pov);
+            }
+            else {
+                panorama.setPosition(position1);
+            }
         };
         const $nextLocationBtn = $('#nextLocationBtn');
         $nextLocationBtn.click(() => {
