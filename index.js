@@ -2,9 +2,9 @@ $(document).ready(() => {
     const $apiKey = $('#apiKey');
     const $submitBtn = $('#submitBtn');
 
-    $apiKey.val(queryStringToMap()['apiKey']);
+    $apiKey.val(queryStringToMap().get('apiKey'));
 
-    $submitBtn.click(function (e) {
+    $submitBtn.click(e => {
         e.preventDefault();
         const apiKey = $apiKey.val();
         const src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&callback=initMap`;
@@ -12,17 +12,12 @@ $(document).ready(() => {
     });
 });
 
-function queryStringToMap() {
-    const queries = {};
-    $.each(document.location.search.substr(1).split('&'), function (_, q) {
-        const bits = q.split('=');
-        queries[bits[0]] = bits[1];
-    });
-    return queries;
+queryStringToMap = () => {
+    const pairs = window.location.search.substr(1).split('&').map(q => q.split('='));
+    return new Map(pairs);
 }
 
 function initMap() {
-    console.log(`init()`);
     const $map = $('#map');
     const directionsService = new google.maps.DirectionsService();
     const request = {
