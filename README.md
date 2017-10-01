@@ -1,3 +1,5 @@
+[![CircleCI](https://circleci.com/gh/taylorjg/ShowMeTheRoute.svg?style=svg)](https://circleci.com/gh/taylorjg/ShowMeTheRoute)
+
 ## Description
 
 The idea is to use the Google Maps Api to follow the route from origin to destination
