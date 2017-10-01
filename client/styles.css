@@ -14,3 +14,7 @@
     font-style: italic;
     font-size: small;
 }
+
+form {
+    margin-top: 10px;
+}
