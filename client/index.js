@@ -33,17 +33,26 @@ window.initMap = function () {
         travelMode: 'DRIVING'
     };
 
-    // eslint-disable-next-line no-unused-vars
     directionsService.route(request, function (response, status) {
 
-        // TODO: check 'status'.
+        if (status !== 'OK') {
+            console.warn(`DirectionsService returned status: ${status}`);
+            return;
+        }
 
-        const numPositions = response.routes[0].overview_path.length;
+        const steps = response.routes[0].legs[0].steps;
+        steps.forEach((step, index) => {
+            console.log(`[step ${index}] instructions: ${step.instructions}; path length: ${step.path.length}`);
+        });
+        const paths = steps.map(step => step.path);
+        const path = [].concat(...paths);
+
+        const numPositions = path.length;
         let positionIndex = 0;
         let nextHeading = null;
         let timer = null;
-        const position1 = response.routes[0].overview_path[positionIndex];
-        const position2 = response.routes[0].overview_path[positionIndex + 1];
+        const position1 = path[positionIndex];
+        const position2 = path[positionIndex + 1];
         const initialHeading = google.maps.geometry.spherical.computeHeading(position1, position2);
         const mapDiv = document.getElementById('map');
 
@@ -75,10 +84,10 @@ window.initMap = function () {
         });
 
         const showPositionIndex = positionIndex => {
-            const position1 = response.routes[0].overview_path[positionIndex];
+            const position1 = path[positionIndex];
             panorama.setPosition(position1);
             if (positionIndex + 1 < numPositions) {
-                const position2 = response.routes[0].overview_path[positionIndex + 1];
+                const position2 = path[positionIndex + 1];
                 const heading = google.maps.geometry.spherical.computeHeading(position1, position2);
                 nextHeading = { heading };
             }

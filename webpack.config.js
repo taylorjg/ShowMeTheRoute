@@ -23,6 +23,7 @@ module.exports = {
             version: packageJson.version
         })
     ],
+    devtool: 'source-map',
     devServer: {
         contentBase: serverPublic
     }

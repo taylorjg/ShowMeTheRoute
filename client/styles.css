@@ -9,3 +9,8 @@
     height: 500px;
     background-color: aliceblue;
 }
+
+#version {
+    font-style: italic;
+    font-size: small;
+}
