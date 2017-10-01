@@ -1,23 +1,29 @@
-$(document).ready(() => {
-    const $apiKey = $('#apiKey');
-    const $submitBtn = $('#submitBtn');
+/* global google */
 
+$(document).ready(() => {
+
+    const $apiKey = $('#apiKey');
     $apiKey.val(queryStringToMap().get('apiKey'));
 
-    $submitBtn.click(e => {
+    const onSubmit = e => {
         e.preventDefault();
         const apiKey = $apiKey.val();
         const src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=geometry&callback=initMap`;
         $('head').append($('<script>', { src }));
-    });
+    };
+
+    $('#submitBtn').click(onSubmit);
 });
 
-queryStringToMap = () => {
+const queryStringToMap = () => {
     const pairs = window.location.search.substr(1).split('&').map(q => q.split('='));
     return new Map(pairs);
-}
+};
 
-function initMap() {
+window.initMap = function () {
+
+    const ADVANCE_TO_NEXT_STEP_INTERVAL = 1000;
+    const ADJUST_HEADING_DELAY = 100;
 
     const directionsService = new google.maps.DirectionsService();
 
@@ -27,7 +33,10 @@ function initMap() {
         travelMode: 'DRIVING'
     };
 
+    // eslint-disable-next-line no-unused-vars
     directionsService.route(request, function (response, status) {
+
+        // TODO: check 'status'.
 
         const numPositions = response.routes[0].overview_path.length;
         let positionIndex = 0;
@@ -55,46 +64,51 @@ function initMap() {
                 showRoadLabels: false
             });
 
-        const goToNextLocation = () => {
-            if (++positionIndex < numPositions) {
-                showPositionIndex(positionIndex);
-            }
-        };
-
-        $('#startBtn').click(() => {
-            const id = setInterval(goToNextLocation, 1000);
-            timer = { id };
-        });
-
-        $('#stopBtn').click(() => {
-            if (timer) {
-                clearInterval(timer.id);
-                timer = null;
-            }
-        });
-
         panorama.addListener('position_changed', () => {
             if (nextHeading) {
                 setTimeout(() => {
                     const pov = panorama.pov;
                     pov.heading = nextHeading.heading;
                     panorama.setPov(pov);
-                }, 100);
+                }, ADJUST_HEADING_DELAY);
             }
         });
 
         const showPositionIndex = positionIndex => {
             const position1 = response.routes[0].overview_path[positionIndex];
+            panorama.setPosition(position1);
             if (positionIndex + 1 < numPositions) {
                 const position2 = response.routes[0].overview_path[positionIndex + 1];
                 const heading = google.maps.geometry.spherical.computeHeading(position1, position2);
                 nextHeading = { heading };
-                panorama.setPosition(position1);
             }
             else {
                 nextHeading = null;
-                panorama.setPosition(position1);
             }
         };
+
+        const advance = () => {
+            if (++positionIndex < numPositions) {
+                showPositionIndex(positionIndex);
+            }
+            else {
+                stopAdvancing();
+            }
+        };
+
+        const startAdvancing = () => {
+            const id = setInterval(advance, ADVANCE_TO_NEXT_STEP_INTERVAL);
+            timer = { id };
+        };
+
+        const stopAdvancing = () => {
+            if (timer) {
+                clearInterval(timer.id);
+                timer = null;
+            }
+        };
+
+        $('#startBtn').click(startAdvancing);
+        $('#stopBtn').click(stopAdvancing);
     });
 };
