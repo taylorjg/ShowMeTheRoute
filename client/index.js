@@ -53,7 +53,6 @@ window.initMap = function () {
         panorama: new google.maps.StreetViewPanorama(mapDiv, panoramaOptions),
         directionsService: new google.maps.DirectionsService(),
         path: [],
-        fullPath: [],
         numPositions: 0,
         positionIndex: 0,
         nextHeading: null,
@@ -96,15 +95,6 @@ window.initMap = function () {
         return state;
     };
 
-    const loadInitialPosition = state => {
-        state.positionIndex = 0;
-        const position = state.path[state.positionIndex];
-        state.panorama.setPosition(position);
-        const heading = google.maps.geometry.spherical.computeHeading(state.fullPath[0], state.fullPath[1]);
-        state.nextHeading = { heading };
-        return state;
-    };
-
     const play = state => {
         state.playing = true;
         return state;
@@ -116,7 +106,8 @@ window.initMap = function () {
     };
 
     const reset = state => {
-        return loadInitialPosition(state);
+        state.positionIndex = 0;
+        return showPositionIndex(state);
     };
 
     const showRoute = state => {
@@ -136,10 +127,7 @@ window.initMap = function () {
             }
             state.path = response.routes[0].overview_path;
             state.numPositions = state.path.length;
-            const steps = response.routes[0].legs[0].steps;
-            const paths = steps.map(step => step.path);
-            state.fullPath = [].concat(...paths);
-            return loadInitialPosition(state);
+            return reset(state);
         });
 
         return state;
