@@ -26,9 +26,15 @@ const queryStringToMap = () => {
     return new Map(pairs);
 };
 
+const log = message => {
+    const now = new Date();
+    const timestamp = now.toISOString().substr(11, 12);
+    console.log(`[${timestamp}] ${message}`);
+};
+
 window.initMap = function () {
 
-    const NEXT_STEP_INTERVAL = 1000;
+    const NEXT_STEP_INTERVAL = 1250;
     const HEADING_DELAY = 100;
 
     const ACTION_SHOW_ROUTE = 0;
@@ -60,18 +66,22 @@ window.initMap = function () {
     };
 
     state.panorama.addListener('position_changed', () => {
+        log(`[panorama position_changed]`);
         if (state.nextHeading) {
             setTimeout(() => {
-                const pov = state.panorama.pov;
-                pov.heading = state.nextHeading.heading;
-                state.panorama.setPov(pov);
+                log(`[nextHeading setTimeout callback]`);
+                if (state.nextHeading) {
+                    const pov = state.panorama.pov;
+                    pov.heading = state.nextHeading.heading;
+                    log(`[nextHeading setTimeout callback] calling panorama.setPov`);
+                    state.panorama.setPov(pov);
+                }
             }, HEADING_DELAY);
         }
     });
 
     const showPositionIndex = state => {
         const position1 = state.path[state.positionIndex];
-        state.panorama.setPosition(position1);
         if (state.positionIndex + 1 < state.numPositions) {
             const position2 = state.path[state.positionIndex + 1];
             const heading = google.maps.geometry.spherical.computeHeading(position1, position2);
@@ -80,19 +90,18 @@ window.initMap = function () {
         else {
             state.nextHeading = null;
         }
+        log(`[showPositionIndex] calling panorama.setPosition`);
+        state.panorama.setPosition(position1);
         return state;
     };
 
     const advance = state => {
-        if (state.playing) {
-            if (++state.positionIndex < state.numPositions) {
-                return showPositionIndex(state);
-            }
-            else {
-                return pause(state);
-            }
+        if (!state.playing) return state;
+        log(`[advance] playing`);
+        if (++state.positionIndex < state.numPositions) {
+            return showPositionIndex(state);
         }
-        return state;
+        return pause(state);
     };
 
     const play = state => {
@@ -111,25 +120,32 @@ window.initMap = function () {
     };
 
     const showRoute = state => {
+
+        log(`[showRoute] entering`);
+
         const $origin = $('#origin');
         const $destination = $('#destination');
+
         const request = {
             origin: $origin.val(),
             destination: $destination.val(),
             travelMode: 'DRIVING'
         };
 
-        // This is async!
         state.directionsService.route(request, function (response, status) {
+            log(`[route callback] status: ${status}`);
             if (status !== 'OK') {
-                console.warn(`DirectionsService returned status: ${status}`);
+                // TODO: state.routeSubject.onNext({ type: CMD_ROUTE_OUTCOME_NOT_OK, status });
                 return state;
             }
             state.path = response.routes[0].overview_path;
             state.numPositions = state.path.length;
+            // TODO: state.routeSubject.onNext({ type: CMD_ROUTE_OUTCOME_OK, route: response.routes[0] });
             return reset(state);
         });
 
+        log(`[showRoute] leaving`);
+        // TODO: state.routeSubject.onNext({ type: CMD_ROUTE_IN_PROGRESS });
         return state;
     };
 
