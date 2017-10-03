@@ -28,15 +28,15 @@ const queryStringToMap = () => {
 
 window.initMap = function () {
 
-    const ADVANCE_TO_NEXT_STEP_INTERVAL = 1000;
-    const ADJUST_HEADING_DELAY = 100;
-    
+    const NEXT_STEP_INTERVAL = 1000;
+    const HEADING_DELAY = 100;
+
     const ACTION_SHOW_ROUTE = 0;
     const ACTION_PLAY = 1;
     const ACTION_PAUSE = 2;
     const ACTION_RESET = 3;
-    // const ACTION_TICK = 4;
-    
+    const ACTION_TICK = 4;
+
     const mapDiv = document.getElementById('map');
     const panoramaOptions = {
         panControl: false,
@@ -57,66 +57,66 @@ window.initMap = function () {
         numPositions: 0,
         positionIndex: 0,
         nextHeading: null,
-        timer: null
+        playing: false
     };
-    
+
     state.panorama.addListener('position_changed', () => {
         if (state.nextHeading) {
             setTimeout(() => {
                 const pov = state.panorama.pov;
                 pov.heading = state.nextHeading.heading;
                 state.panorama.setPov(pov);
-            }, ADJUST_HEADING_DELAY);
+            }, HEADING_DELAY);
         }
     });
 
-    const showPositionIndex = positionIndex => {
-        const position1 = state.path[positionIndex];
+    const showPositionIndex = state => {
+        const position1 = state.path[state.positionIndex];
         state.panorama.setPosition(position1);
-        if (positionIndex + 1 < state.numPositions) {
-            const position2 = state.path[positionIndex + 1];
+        if (state.positionIndex + 1 < state.numPositions) {
+            const position2 = state.path[state.positionIndex + 1];
             const heading = google.maps.geometry.spherical.computeHeading(position1, position2);
             state.nextHeading = { heading };
         }
         else {
             state.nextHeading = null;
         }
+        return state;
     };
 
-    const advance = () => {
-        if (++state.positionIndex < state.numPositions) {
-            showPositionIndex(state.positionIndex);
+    const advance = state => {
+        if (state.playing) {
+            if (++state.positionIndex < state.numPositions) {
+                return showPositionIndex(state);
+            }
+            else {
+                return pause(state);
+            }
         }
-        else {
-            pause();
-        }
+        return state;
     };
 
-    const loadInitialPosition = () => {
+    const loadInitialPosition = state => {
         state.positionIndex = 0;
         const position = state.path[state.positionIndex];
         state.panorama.setPosition(position);
         const heading = google.maps.geometry.spherical.computeHeading(state.fullPath[0], state.fullPath[1]);
         state.nextHeading = { heading };
+        return state;
     };
 
     const play = state => {
-        const id = setInterval(advance, ADVANCE_TO_NEXT_STEP_INTERVAL);
-        state.timer = { id };
+        state.playing = true;
         return state;
     };
 
     const pause = state => {
-        if (state.timer) {
-            clearInterval(state.timer.id);
-            state.timer = null;
-        }
+        state.playing = false;
         return state;
     };
 
     const reset = state => {
-        loadInitialPosition();
-        return state;
+        return loadInitialPosition(state);
     };
 
     const showRoute = state => {
@@ -127,6 +127,8 @@ window.initMap = function () {
             destination: $destination.val(),
             travelMode: 'DRIVING'
         };
+
+        // This is async!
         state.directionsService.route(request, function (response, status) {
             if (status !== 'OK') {
                 console.warn(`DirectionsService returned status: ${status}`);
@@ -137,8 +139,9 @@ window.initMap = function () {
             const steps = response.routes[0].legs[0].steps;
             const paths = steps.map(step => step.path);
             state.fullPath = [].concat(...paths);
-            loadInitialPosition();
+            return loadInitialPosition(state);
         });
+
         return state;
     };
 
@@ -151,8 +154,11 @@ window.initMap = function () {
     const playBtn$ = Rx.Observable.fromEvent(playBtn, 'click').mapTo({ type: ACTION_PLAY });
     const pauseBtn$ = Rx.Observable.fromEvent(pauseBtn, 'click').mapTo({ type: ACTION_PAUSE });
     const resetBtn$ = Rx.Observable.fromEvent(resetBtn, 'click').mapTo({ type: ACTION_RESET });
+    const interval$ = Rx.Observable.interval(NEXT_STEP_INTERVAL).mapTo({ type: ACTION_TICK });
 
-    const merged$ = Rx.Observable.merge(showRouteBtn$, playBtn$, pauseBtn$, resetBtn$);
+    // TODO: do we need a stream of (async) outcomes from the directions service ?
+
+    const merged$ = Rx.Observable.merge(showRouteBtn$, playBtn$, pauseBtn$, resetBtn$, interval$);
     const scan$ = merged$.scan((state, action) => {
         switch (action.type) {
             case ACTION_SHOW_ROUTE:
@@ -163,8 +169,8 @@ window.initMap = function () {
                 return pause(state);
             case ACTION_RESET:
                 return reset(state);
-            // case ACTION_TICK:
-            //     break;
+            case ACTION_TICK:
+                return advance(state);
             default:
                 return state;
         }
