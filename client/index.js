@@ -1,4 +1,4 @@
-/* global google, Rx */
+/* global google, Rx, Immutable */
 
 $(document).ready(() => {
 
@@ -57,7 +57,7 @@ window.initMap = function () {
         showRoadLabels: false
     };
 
-    const state = {
+    const State = Immutable.Record({
         panorama: new google.maps.StreetViewPanorama(mapDiv, panoramaOptions),
         directionsService: new google.maps.DirectionsService(),
         async$: new Rx.Subject(),
@@ -65,7 +65,9 @@ window.initMap = function () {
         positionIndex: 0,
         playing: false,
         routing: false
-    };
+    });
+
+    const initialState = new State();
 
     const showPositionIndex = state => {
         const position1 = state.path[state.positionIndex];
@@ -78,6 +80,7 @@ window.initMap = function () {
                 () => {
                     const pov = state.panorama.pov;
                     pov.heading = heading;
+                    pov.pitch = 0;
                     log(`[setTimeout callback] calling panorama.setPov`);
                     state.panorama.setPov(pov);
                 },
@@ -89,25 +92,20 @@ window.initMap = function () {
     const advance = state => {
         if (!state.playing) return state;
         log(`[advance] playing`);
-        if (++state.positionIndex < state.path.length) {
-            return showPositionIndex(state);
+        if (state.positionIndex + 1 < state.path.length) {
+            const state2 = state.set('positionIndex', state.positionIndex + 1);
+            return showPositionIndex(state2);
         }
         return pause(state);
     };
 
-    const play = state => {
-        state.playing = true;
-        return state;
-    };
+    const play = state => state.set('playing', true);
 
-    const pause = state => {
-        state.playing = false;
-        return state;
-    };
+    const pause = state => state.set('playing', false);
 
     const reset = state => {
-        state.positionIndex = 0;
-        return showPositionIndex(state);
+        const state2 = state.set('positionIndex', 0);
+        return showPositionIndex(state2);
     };
 
     const showRoute = state => {
@@ -131,18 +129,16 @@ window.initMap = function () {
             else {
                 state.async$.next({ type: ACTION_ROUTE_FAILURE, status });
             }
-            state.routing = false;
-            return state;
+            return state.set('routing', false);
         });
 
         log(`[showRoute] leaving`);
-        state.routing = true;
-        return state;
+        return state.set('routing', true);
     };
 
     const routeSuccess = (state, route) => {
-        state.path = route.overview_path;
-        return reset(state);
+        const state2 = state.set('path', route.overview_path);
+        return reset(state2);
     };
 
     const routeFailure = (state, status) => {
@@ -171,7 +167,7 @@ window.initMap = function () {
         pauseBtn$,
         resetBtn$,
         interval$,
-        state.async$);
+        initialState.async$);
 
     const scan$ = merged$.scan((state, action) => {
         switch (action.type) {
@@ -192,7 +188,7 @@ window.initMap = function () {
             default:
                 return state;
         }
-    }, state);
+    }, initialState);
 
     scan$.subscribe();
 };
