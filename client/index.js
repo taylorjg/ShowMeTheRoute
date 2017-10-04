@@ -28,7 +28,7 @@ const queryStringToMap = () => {
 
 window.initMap = function () {
 
-    const ADVANCE_TO_NEXT_STEP_INTERVAL = 1000;
+    const ADVANCE_TO_NEXT_STEP_INTERVAL = 1300;
     const ADJUST_HEADING_DELAY = 100;
 
     const mapDiv = document.getElementById('map');

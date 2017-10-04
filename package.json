@@ -1,6 +1,6 @@
 {
   "name": "show-me-the-route",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "Use Google Maps Api to follow route from origin to destination using Street View",
   "main": "index.js",
   "scripts": {
