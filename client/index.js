@@ -35,7 +35,7 @@ const log = message => {
 window.initMap = function () {
 
     const NEXT_STEP_INTERVAL = 1300;
-    const HEADING_DELAY = 100;
+    const HEADING_DELAY = 200;
 
     const ACTION_SHOW_ROUTE = 0;
     const ACTION_PLAY = 1;
@@ -60,41 +60,29 @@ window.initMap = function () {
     const state = {
         panorama: new google.maps.StreetViewPanorama(mapDiv, panoramaOptions),
         directionsService: new google.maps.DirectionsService(),
+        async$: new Rx.Subject(),
         path: [],
         positionIndex: 0,
-        nextHeading: null,
         playing: false,
-        routing: false,
-        async$: new Rx.Subject()
+        routing: false
     };
-
-    state.panorama.addListener('position_changed', () => {
-        log(`[panorama position_changed]`);
-        if (state.nextHeading) {
-            setTimeout(() => {
-                log(`[nextHeading setTimeout callback]`);
-                if (state.nextHeading) {
-                    const pov = state.panorama.pov;
-                    pov.heading = state.nextHeading.heading;
-                    log(`[nextHeading setTimeout callback] calling panorama.setPov`);
-                    state.panorama.setPov(pov);
-                }
-            }, HEADING_DELAY);
-        }
-    });
 
     const showPositionIndex = state => {
         const position1 = state.path[state.positionIndex];
+        log(`[showPositionIndex] calling panorama.setPosition`);
+        state.panorama.setPosition(position1);
         if (state.positionIndex + 1 < state.path.length) {
             const position2 = state.path[state.positionIndex + 1];
             const heading = google.maps.geometry.spherical.computeHeading(position1, position2);
-            state.nextHeading = { heading };
+            setTimeout(
+                () => {
+                    const pov = state.panorama.pov;
+                    pov.heading = heading;
+                    log(`[setTimeout callback] calling panorama.setPov`);
+                    state.panorama.setPov(pov);
+                },
+                HEADING_DELAY);
         }
-        else {
-            state.nextHeading = null;
-        }
-        log(`[showPositionIndex] calling panorama.setPosition`);
-        state.panorama.setPosition(position1);
         return state;
     };
 
