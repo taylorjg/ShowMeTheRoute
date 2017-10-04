@@ -34,7 +34,7 @@ const log = message => {
 
 window.initMap = function () {
 
-    const NEXT_STEP_INTERVAL = 1250;
+    const NEXT_STEP_INTERVAL = 1300;
     const HEADING_DELAY = 100;
 
     const ACTION_SHOW_ROUTE = 0;
@@ -42,6 +42,8 @@ window.initMap = function () {
     const ACTION_PAUSE = 2;
     const ACTION_RESET = 3;
     const ACTION_TICK = 4;
+    const ACTION_ROUTE_SUCCESS = 5;
+    const ACTION_ROUTE_FAILURE = 6;
 
     const mapDiv = document.getElementById('map');
     const panoramaOptions = {
@@ -59,10 +61,11 @@ window.initMap = function () {
         panorama: new google.maps.StreetViewPanorama(mapDiv, panoramaOptions),
         directionsService: new google.maps.DirectionsService(),
         path: [],
-        numPositions: 0,
         positionIndex: 0,
         nextHeading: null,
-        playing: false
+        playing: false,
+        routing: false,
+        async$: new Rx.Subject()
     };
 
     state.panorama.addListener('position_changed', () => {
@@ -82,7 +85,7 @@ window.initMap = function () {
 
     const showPositionIndex = state => {
         const position1 = state.path[state.positionIndex];
-        if (state.positionIndex + 1 < state.numPositions) {
+        if (state.positionIndex + 1 < state.path.length) {
             const position2 = state.path[state.positionIndex + 1];
             const heading = google.maps.geometry.spherical.computeHeading(position1, position2);
             state.nextHeading = { heading };
@@ -98,7 +101,7 @@ window.initMap = function () {
     const advance = state => {
         if (!state.playing) return state;
         log(`[advance] playing`);
-        if (++state.positionIndex < state.numPositions) {
+        if (++state.positionIndex < state.path.length) {
             return showPositionIndex(state);
         }
         return pause(state);
@@ -134,35 +137,54 @@ window.initMap = function () {
 
         state.directionsService.route(request, function (response, status) {
             log(`[route callback] status: ${status}`);
-            if (status !== 'OK') {
-                // TODO: state.routeSubject.onNext({ type: CMD_ROUTE_OUTCOME_NOT_OK, status });
-                return state;
+            if (status === 'OK') {
+                state.async$.next({ type: ACTION_ROUTE_SUCCESS, route: response.routes[0] });
             }
-            state.path = response.routes[0].overview_path;
-            state.numPositions = state.path.length;
-            // TODO: state.routeSubject.onNext({ type: CMD_ROUTE_OUTCOME_OK, route: response.routes[0] });
-            return reset(state);
+            else {
+                state.async$.next({ type: ACTION_ROUTE_FAILURE, status });
+            }
+            state.routing = false;
+            return state;
         });
 
         log(`[showRoute] leaving`);
-        // TODO: state.routeSubject.onNext({ type: CMD_ROUTE_IN_PROGRESS });
+        state.routing = true;
         return state;
     };
+
+    const routeSuccess = (state, route) => {
+        state.path = route.overview_path;
+        return reset(state);
+    };
+
+    const routeFailure = (state, status) => {
+        console.error(`Route failure - status: ${status}`);
+        return state;
+    };
+
+    const preventDefault = e => e.preventDefault();
 
     const showRouteBtn = document.getElementById('showRouteBtn');
     const playBtn = document.getElementById('playBtn');
     const pauseBtn = document.getElementById('pauseBtn');
     const resetBtn = document.getElementById('resetBtn');
 
-    const showRouteBtn$ = Rx.Observable.fromEvent(showRouteBtn, 'click').do(e => e.preventDefault()).mapTo({ type: ACTION_SHOW_ROUTE });
+    const showRouteBtn$ = Rx.Observable.fromEvent(showRouteBtn, 'click')
+        .do(preventDefault)
+        .mapTo({ type: ACTION_SHOW_ROUTE });
     const playBtn$ = Rx.Observable.fromEvent(playBtn, 'click').mapTo({ type: ACTION_PLAY });
     const pauseBtn$ = Rx.Observable.fromEvent(pauseBtn, 'click').mapTo({ type: ACTION_PAUSE });
     const resetBtn$ = Rx.Observable.fromEvent(resetBtn, 'click').mapTo({ type: ACTION_RESET });
     const interval$ = Rx.Observable.interval(NEXT_STEP_INTERVAL).mapTo({ type: ACTION_TICK });
 
-    // TODO: do we need a stream of (async) outcomes from the directions service ?
+    const merged$ = Rx.Observable.merge(
+        showRouteBtn$,
+        playBtn$,
+        pauseBtn$,
+        resetBtn$,
+        interval$,
+        state.async$);
 
-    const merged$ = Rx.Observable.merge(showRouteBtn$, playBtn$, pauseBtn$, resetBtn$, interval$);
     const scan$ = merged$.scan((state, action) => {
         switch (action.type) {
             case ACTION_SHOW_ROUTE:
@@ -175,9 +197,14 @@ window.initMap = function () {
                 return reset(state);
             case ACTION_TICK:
                 return advance(state);
+            case ACTION_ROUTE_SUCCESS:
+                return routeSuccess(state, action.route);
+            case ACTION_ROUTE_FAILURE:
+                return routeFailure(state, action.status);
             default:
                 return state;
         }
     }, state);
+
     scan$.subscribe();
 };
