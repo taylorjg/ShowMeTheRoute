@@ -1,24 +1,11 @@
 /* global google */
 
 $(document).ready(() => {
-
-    const $apiKey = $('#apiKey');
     const $origin = $('#origin');
     const $destination = $('#destination');
-
     const qsmap = queryStringToMap();
-    $apiKey.val(qsmap.get('apiKey'));
     $origin.val(qsmap.get('origin'));
     $destination.val(qsmap.get('destination'));
-
-    const onSubmit = e => {
-        e.preventDefault();
-        const apiKey = $apiKey.val();
-        const src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=geometry&callback=initMap`;
-        $('head').append($('<script>', { src }));
-    };
-
-    $('#submitBtn').click(onSubmit);
 });
 
 const queryStringToMap = () => {

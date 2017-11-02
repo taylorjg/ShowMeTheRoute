@@ -1,3 +1,5 @@
+/* eslint-env node */
+
 const CopyWebpackPlugin = require('copy-webpack-plugin');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
 const path = require('path');
@@ -20,7 +22,9 @@ module.exports = {
         ]),
         new HtmlWebpackPlugin({
             template: './client/index.html',
-            version: packageJson.version
+            inject: false,
+            version: packageJson.version,
+            googleApiKey: process.env.GOOGLE_API_KEY
         })
     ],
     devtool: 'source-map',
