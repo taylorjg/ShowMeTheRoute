@@ -12,3 +12,4 @@ using Street View.
 * [Street View Service](https://developers.google.com/maps/documentation/javascript/streetview)
 * [Directions Service](https://developers.google.com/maps/documentation/javascript/directions)
 * [Geometry Library](https://developers.google.com/maps/documentation/javascript/geometry)
+* [Places Library](https://developers.google.com/maps/documentation/javascript/places)

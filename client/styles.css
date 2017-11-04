@@ -18,3 +18,7 @@
 form {
     margin-top: 10px;
 }
+
+#alertCloseBtn {
+    outline-style: none;
+}

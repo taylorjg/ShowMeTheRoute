@@ -6,11 +6,34 @@ $(document).ready(() => {
     const qsmap = queryStringToMap();
     $origin.val(qsmap.get('origin'));
     $destination.val(qsmap.get('destination'));
+    $('#alertCloseBtn').click(hideAlert);
 });
 
 const queryStringToMap = () => {
     const pairs = window.location.search.substr(1).split('&').map(q => q.split('='));
     return new Map(pairs);
+};
+
+const hideAlert = () => {
+    const $alert = $('#alert');
+    $alert.removeClass('show');
+    $alert.addClass('hidden');
+};
+
+const showAlert = (title, message) => {
+    const $alert = $('#alert');
+    const $alertTitle = $('#alertTitle');
+    const $alertMessage = $('#alertMessage');
+    $alertTitle.text(title);
+    $alertMessage.text(message);
+    $alert.removeClass('hidden');
+    $alert.addClass('show');
+};
+
+window.gm_authFailure = function() {
+    showAlert(
+        'Google Maps Api Authorisation Failure',
+        'An error occurred loading the Google Maps Api.');
 };
 
 window.initMap = function () {
@@ -110,7 +133,9 @@ window.initMap = function () {
 
         directionsService.route(request, function (response, status) {
             if (status !== 'OK') {
-                console.warn(`DirectionsService returned status: ${status}`);
+                showAlert(
+                    'Failed to find route',
+                    `The directions service returned, '${status}'.`);
                 return;
             }
             path = response.routes[0].overview_path;
