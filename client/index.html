@@ -19,11 +19,11 @@
                 <form>
                     <div class="form-group">
                         <label class="control-label" for="origin">Origin</label>
-                        <input type="text" id="origin" name="origin" class="form-control">
+                        <input type="text" id="origin" name="origin" class="form-control" placeholder="Enter a place to start from">
                     </div>
                     <div class="form-group">
                         <label class="control-label" for="destination">Destination</label>
-                        <input type="text" id="destination" name="destination" class="form-control">
+                        <input type="text" id="destination" name="destination" class="form-control" placeholder="Enter a destination">
                     </div>
                     <button id="showRouteBtn" type="submit" class="btn btn-sm btn-primary">Show Route</button>
                 </form>
@@ -50,7 +50,7 @@
     </div>
 
     <script src="bundle.js"></script>
-    <script src="https://maps.googleapis.com/maps/api/js?key=<%= htmlWebpackPlugin.options.googleApiKey %>&libraries=geometry&callback=initMap"></script>
+    <script src="https://maps.googleapis.com/maps/api/js?key=<%= htmlWebpackPlugin.options.googleApiKey %>&libraries=geometry,places&callback=initMap"></script>
 </body>
 
 </html>

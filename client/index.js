@@ -32,6 +32,9 @@ window.initMap = function () {
         });
     const directionsService = new google.maps.DirectionsService();
 
+    new google.maps.places.Autocomplete(document.getElementById('origin'));
+    new google.maps.places.Autocomplete(document.getElementById('destination'));
+
     let path = [];
     let fullPath = [];
     let numPositions = 0;
