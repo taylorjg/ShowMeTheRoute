@@ -1,36 +1,42 @@
 /* global google */
 
-$(document).ready(() => {
-    const $origin = $('#origin');
-    const $destination = $('#destination');
-    const qsmap = queryStringToMap();
-    $origin.val(qsmap.get('origin'));
-    $destination.val(qsmap.get('destination'));
-    $('#alertCloseBtn').click(hideAlert);
-});
+const alert = document.getElementById('alert');
+const alertCloseBtn = document.getElementById('alertCloseBtn');
+const alertTitle = document.getElementById('alertTitle');
+const alertMessage = document.getElementById('alertMessage');
 
-const queryStringToMap = () => {
+const origin = document.getElementById('origin');
+const destination = document.getElementById('destination');
+const showRouteBtn = document.getElementById('showRouteBtn');
+
+const map = document.getElementById('map');
+const playBtn = document.getElementById('playBtn');
+const pauseBtn = document.getElementById('pauseBtn');
+const resetBtn = document.getElementById('resetBtn');
+
+const queryStringToDict = () => {
     const pairs = window.location.search.substr(1).split('&').map(q => q.split('='));
-    return new Map(pairs);
+    return pairs.reduce((m, [k, v]) => (m[k] = v, m), {});
 };
 
+const qsdict = queryStringToDict();
+origin.value = qsdict['origin'] || '';
+destination.value = qsdict['destination'] || '';
+origin.focus();
+
 const hideAlert = () => {
-    const $alert = $('#alert');
-    $alert.removeClass('show');
-    $alert.addClass('hidden');
+    alert.className = 'hidden';
 };
 
 const showAlert = (title, message) => {
-    const $alert = $('#alert');
-    const $alertTitle = $('#alertTitle');
-    const $alertMessage = $('#alertMessage');
-    $alertTitle.text(title);
-    $alertMessage.text(message);
-    $alert.removeClass('hidden');
-    $alert.addClass('show');
+    alertTitle.textContent = title;
+    alertMessage.textContent = message;
+    alert.className = 'show';
 };
 
-window.gm_authFailure = function() {
+alertCloseBtn.addEventListener('click', hideAlert);
+
+window.gm_authFailure = function () {
     showAlert(
         'Google Maps Api Authorisation Failure',
         'An error occurred loading the Google Maps Api.');
@@ -41,9 +47,9 @@ window.initMap = function () {
     const ADVANCE_TO_NEXT_STEP_INTERVAL = 1300;
     const ADJUST_HEADING_DELAY = 100;
 
-    const mapDiv = document.getElementById('map');
     const panorama = new google.maps.StreetViewPanorama(
-        mapDiv, {
+        map,
+        {
             panControl: false,
             zoomControl: false,
             addressControl: false,
@@ -53,10 +59,11 @@ window.initMap = function () {
             enableCloseButton: false,
             showRoadLabels: false
         });
+
     const directionsService = new google.maps.DirectionsService();
 
-    new google.maps.places.Autocomplete(document.getElementById('origin'));
-    new google.maps.places.Autocomplete(document.getElementById('destination'));
+    new google.maps.places.Autocomplete(origin);
+    new google.maps.places.Autocomplete(destination);
 
     let path = [];
     let fullPath = [];
@@ -65,7 +72,9 @@ window.initMap = function () {
     let nextHeading = null;
     let timer = null;
 
-    panorama.addListener('position_changed', () => {
+    // TODO: use addListenerOnce instead ?
+    google.maps.event.addListener(panorama, 'position_changed', () => {
+        console.log('[position_changed]');
         if (nextHeading) {
             setTimeout(() => {
                 const pov = panorama.pov;
@@ -123,33 +132,33 @@ window.initMap = function () {
 
     const showRoute = e => {
         e.preventDefault();
-        const $origin = $('#origin');
-        const $destination = $('#destination');
         const request = {
-            origin: $origin.val(),
-            destination: $destination.val(),
+            origin: origin.value,
+            destination: destination.value,
             travelMode: 'DRIVING'
         };
 
         directionsService.route(request, function (response, status) {
+
             if (status !== 'OK') {
                 showAlert(
                     'Failed to find route',
                     `The directions service returned, '${status}'.`);
-                return;
             }
-            path = response.routes[0].overview_path;
-            numPositions = path.length;
-
-            const steps = response.routes[0].legs[0].steps;
-            const paths = steps.map(step => step.path);
-            fullPath = [].concat(...paths);
-            loadInitialPosition();
+            else {
+                hideAlert();
+                path = response.routes[0].overview_path;
+                numPositions = path.length;
+                const steps = response.routes[0].legs[0].steps;
+                const paths = steps.map(step => step.path);
+                fullPath = [].concat(...paths);
+                loadInitialPosition();
+            }
         });
     };
 
-    $('#showRouteBtn').click(showRoute);
-    $('#playBtn').click(play);
-    $('#pauseBtn').click(pause);
-    $('#resetBtn').click(reset);
+    showRouteBtn.addEventListener('click', showRoute);
+    playBtn.addEventListener('click', play);
+    pauseBtn.addEventListener('click', pause);
+    resetBtn.addEventListener('click', reset);
 };
