@@ -1,5 +1,3 @@
-/* global google */
-
 const alert = document.getElementById('alert');
 const alertCloseBtn = document.getElementById('alertCloseBtn');
 const alertTitle = document.getElementById('alertTitle');

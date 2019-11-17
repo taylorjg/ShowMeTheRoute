@@ -8,7 +8,7 @@ const packageJson = require('./package.json');
 const serverPublic = path.join(__dirname, 'server', 'public');
 
 module.exports = {
-  // mode: 'production',
+  mode: 'production',
   entry: './client/index.js',
   output: {
     path: serverPublic,
